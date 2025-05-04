@@ -1,10 +1,10 @@
-
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+import datetime
 
 # Load data
-df = pd.read_csv("../data/cleaned_full_permit_data.csv", parse_dates=["Filing Date", "Issuance Date"])
+df = pd.read_csv(r"C:\Users\Alex\OneDrive\Documents\GitHub\nyc-housing-da\cleaned_full_permit_data.csv", parse_dates=["Filing Date", "Issuance Date"])
 
 # Filter invalid coordinates
 df = df.dropna(subset=['LATITUDE', 'LONGITUDE'])
@@ -12,10 +12,11 @@ df = df[df['Delay'].between(1, 180)]
 
 st.title("NYC Construction Permit Delay Dashboard")
 
-# Date range filter
-min_date = df['Filing Date'].min()
-max_date = df['Filing Date'].max()
+# Convert pandas Timestamps to native Python dates for Streamlit
+min_date = df['Filing Date'].min().to_pydatetime().date()
+max_date = df['Filing Date'].max().to_pydatetime().date()
 
+# Date range slider
 start_date, end_date = st.slider(
     "Select Filing Date Range:",
     min_value=min_date,
@@ -23,7 +24,11 @@ start_date, end_date = st.slider(
     value=(min_date, max_date)
 )
 
-df = df[(df['Filing Date'] >= start_date) & (df['Filing Date'] <= end_date)]
+# Filter the DataFrame with converted dates
+df = df[
+    (df['Filing Date'] >= pd.to_datetime(start_date)) &
+    (df['Filing Date'] <= pd.to_datetime(end_date))
+]
 
 # Permit type filter
 permit_types = df['Permit Type'].unique().tolist()
@@ -55,4 +60,19 @@ fig = px.scatter_mapbox(
 fig.update_layout(mapbox_style="carto-positron")
 fig.update_layout(margin={"r":0,"t":40,"l":0,"b":0})
 
-st.plotly_chart(fig, use_container_width=True)
+tab1, tab2, tab3 = st.tabs(["🗺️ Map", "📊 Delay by Borough", "📥 Export"])
+
+with tab1:
+    st.plotly_chart(fig, use_container_width=True)
+
+with tab2:
+    st.bar_chart(df.groupby("BOROUGH")["Delay"].mean().sort_values())
+
+with tab3:
+    st.download_button(
+        label="Download filtered data as CSV",
+        data=df.to_csv(index=False),
+        file_name="filtered_data.csv",
+        mime="text/csv"
+    )
+
