@@ -14,7 +14,7 @@ print(df.sample(5).T)
 
 # Check unique values in key fields
 print(df['Permit Type'].value_counts())
-print(df['Borough'].value_counts())
+print(df['BOROUGH'].value_counts())
 print(df['Job Type'].value_counts())
 
 # Check date formats
