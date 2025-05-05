@@ -35,7 +35,7 @@ deactivate () {
 # unset irrelevant variables
 deactivate nondestructive
 
-VIRTUAL_ENV="C:\Users\Alex\OneDrive\Documents\GitHub\nyc-housing-da\venv"
+VIRTUAL_ENV="C:\Users\Alex\Documents\Github\nyc-housing-da\venv"
 export VIRTUAL_ENV
 
 _OLD_VIRTUAL_PATH="$PATH"
