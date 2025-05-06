@@ -62,7 +62,7 @@ with top_row[1]:
 # -------------------- Load Data --------------------
 with st.spinner("Loading data..."):
     try:
-        # Load from relative path (this file is now in your GitHub repo)
+        # Load from relative path
         df = pd.read_csv(
             os.path.join("sample_5001_rows.csv"),
             parse_dates=["Filing Date", "Issuance Date"],
