@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Load the full CSV in chunks
-input_path = r"C:\Users\Alex\Downloads\DOB_Permit_Issuance_20250504.csv"
+input_path = r"DOB_Permit_Issuance_20250504.csv"
 output_path = "cleaned_full_permit_data_v2.csv"
 chunks = pd.read_csv(input_path, chunksize=100000, low_memory=False)
 

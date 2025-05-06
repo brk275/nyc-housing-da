@@ -62,8 +62,9 @@ with top_row[1]:
 # -------------------- Load Data --------------------
 with st.spinner("Loading data..."):
     try:
+        # Load from relative path (this file is now in your GitHub repo)
         df = pd.read_csv(
-            r"C:\\Users\\Alex\\Documents\\Github\\nyc-housing-da\\cleaned_full_permit_data_v2.csv",
+            os.path.join("sample_5001_rows.csv"),
             parse_dates=["Filing Date", "Issuance Date"],
             low_memory=False
         )
