@@ -169,12 +169,23 @@ with tab3:
         file_name="filtered_permit_data.csv",
         mime="text/csv"
     )
-# -------------------- Extra Tabs for Delay Analysis --------------------
-tab4, tab5, tab6 = st.tabs([
-    "📄 Delay by Permit Type",
-    "🔧 Delay by Job Type",
-    "📈 Delay Over Time"
-])
+# -------------------- Additional Delay Charts --------------------
+st.subheader("📊 Delay Trends by Category")
+col1, col2, col3 = st.columns(3)
+
+with col1:
+    st.markdown("**📄 By Permit Type**")
+    st.bar_chart(df.groupby("Permit Type")["Delay"].mean().sort_values())
+
+with col2:
+    st.markdown("**🔧 By Job Type**")
+    st.bar_chart(df.groupby("Job Type")["Delay"].mean().sort_values())
+
+with col3:
+    st.markdown("**📈 Monthly Trend**")
+    df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
+    monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
+    st.line_chart(monthly_avg)
 
 with tab4:
     st.subheader("📄 Average Delay by Permit Type")
