@@ -55,7 +55,11 @@ with top_row[1]:
 # -------------------- Load Data --------------------
 with st.spinner("Loading data..."):
     try:
-        df = pd.read_csv("sample_5001_rows.csv", parse_dates=["Filing Date", "Issuance Date"], low_memory=False)
+        df = pd.read_csv(
+            "sample_5001_rows.csv",
+            parse_dates=["Filing Date", "Issuance Date"],
+            low_memory=False
+        )
         rowcount = len(df)
     except Exception as e:
         st.error(f"❌ Failed to load data: {e}")
@@ -67,7 +71,9 @@ df['Issuance Date'] = pd.to_datetime(df['Issuance Date'], errors='coerce')
 df = df.dropna(subset=['LATITUDE', 'LONGITUDE'])
 df = df[df['Delay'].between(1, 180)]
 
-def safe_col(name): return name if name in df.columns else None
+# -------------------- Column Safety --------------------
+def safe_col(name):
+    return name if name in df.columns else None
 
 desc_col = safe_col('Job Description')
 permittee_col = safe_col("Permittee's Business Name")
@@ -116,7 +122,7 @@ if permittee_query.strip() and permittee_col:
     terms = permittee_query.lower().split()
     df = df[df[permittee_col].astype(str).str.lower().apply(lambda val: all(term in val for term in terms))]
 
-# -------------------- Limit Sample --------------------
+# -------------------- Sample Limit --------------------
 if len(df) > 5000:
     df = df.sample(n=5000, random_state=42)
     st.info("📦 Displaying 5,000-row sample for performance.")
@@ -134,19 +140,17 @@ df['hover'] = (
     ("<b>Owner:</b> " + df[owner_col].astype(str) + "<br>" if owner_col else "")
 )
 
-# -------------------- Main Tabs --------------------
-tab1, tab2, tab3 = st.tabs(["🗺️ Map + Trends", "📊 Delay by Borough", "📥 Export"])
+# -------------------- Map + Tabs --------------------
+tab1, tab2, tab3 = st.tabs(["🗺️ Map & Trends", "📊 Delay by Borough", "📥 Export"])
 
-# -------------------- Map & Trends Tab --------------------
 with tab1:
-    st.plotly_chart(
-        px.scatter_mapbox(
-            df, lat="LATITUDE", lon="LONGITUDE", color="Delay",
-            color_continuous_scale="YlOrRd", size_max=5, zoom=10, height=600,
-            hover_name="hover", title="Filtered NYC Permit Delay Map"
-        ).update_layout(mapbox_style="carto-positron", margin={"r": 0, "t": 40, "l": 0, "b": 0}),
-        use_container_width=True
+    map_fig = px.scatter_mapbox(
+        df, lat="LATITUDE", lon="LONGITUDE", color="Delay",
+        color_continuous_scale="YlOrRd", size_max=5, zoom=10, height=800,
+        hover_name="hover", title="Filtered NYC Permit Delay Map"
     )
+    map_fig.update_layout(mapbox_style="carto-positron", margin={"r": 0, "t": 40, "l": 0, "b": 0})
+    st.plotly_chart(map_fig, use_container_width=True)
 
     st.subheader("📌 Summary Stats")
     col1, col2, col3 = st.columns(3)
@@ -155,28 +159,25 @@ with tab1:
     if cost_col:
         col3.metric("Total Est. Cost", f"${df[cost_col].dropna().astype(float).sum():,.0f}")
 
-    chart_tabs = st.tabs(["📄 Permit Type", "🔧 Job Type", "📈 Delay Over Time"])
+    st.markdown("### 📄 Average Delay by Permit Type")
+    fig1 = px.bar(df.groupby("Permit Type")["Delay"].mean().sort_values()).update_layout(height=500)
+    st.plotly_chart(fig1, use_container_width=True)
 
-    with chart_tabs[0]:
-        st.subheader("📄 Average Delay by Permit Type")
-        st.bar_chart(df.groupby("Permit Type")["Delay"].mean().sort_values())
+    st.markdown("### 🔧 Average Delay by Job Type")
+    fig2 = px.bar(df.groupby("Job Type")["Delay"].mean().sort_values()).update_layout(height=500)
+    st.plotly_chart(fig2, use_container_width=True)
 
-    with chart_tabs[1]:
-        st.subheader("🔧 Average Delay by Job Type")
-        st.bar_chart(df.groupby("Job Type")["Delay"].mean().sort_values())
+    st.markdown("### 📈 Monthly Delay Trend")
+    df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
+    monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
+    fig3 = px.line(monthly_avg, title="Monthly Delay Trend").update_layout(height=500)
+    st.plotly_chart(fig3, use_container_width=True)
 
-    with chart_tabs[2]:
-        st.subheader("📈 Monthly Delay Trend")
-        df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
-        monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
-        st.line_chart(monthly_avg)
-
-# -------------------- Borough Tab --------------------
 with tab2:
     st.subheader("📊 Average Delay by Borough")
-    st.bar_chart(df.groupby("BOROUGH")["Delay"].mean().sort_values())
+    borough_fig = px.bar(df.groupby("BOROUGH")["Delay"].mean().sort_values()).update_layout(height=500)
+    st.plotly_chart(borough_fig, use_container_width=True)
 
-# -------------------- Export Tab --------------------
 with tab3:
     st.subheader("📥 Download Filtered Data")
     st.download_button(
