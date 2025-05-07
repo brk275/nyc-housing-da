@@ -175,20 +175,18 @@ with tab3:
 
 # -------------------- Delay Trends --------------------
 st.subheader("📊 Delay Trends by Category")
-col1, col2, col3 = st.columns(3)
 
-with col1:
-    st.markdown("**📄 By Permit Type**")
-    st.bar_chart(df.groupby("Permit Type")["Delay"].mean().sort_values())
+st.markdown("### 📄 Average Delay by Permit Type")
+st.bar_chart(df.groupby("Permit Type")["Delay"].mean().sort_values())
 
-with col2:
-    st.markdown("**🔧 By Job Type**")
-    st.bar_chart(df.groupby("Job Type")["Delay"].mean().sort_values())
+st.markdown("### 🔧 Average Delay by Job Type")
+st.bar_chart(df.groupby("Job Type")["Delay"].mean().sort_values())
 
-with col3:
-    st.markdown("**📈 Monthly Trend**")
-    df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
-    st.line_chart(df.groupby("Month")["Delay"].mean().sort_index())
+st.markdown("### 📈 Monthly Delay Trend")
+df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
+monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
+st.line_chart(monthly_avg)
+
 
 # -------------------- Debug Info --------------------
 with st.expander("🧪 Debug Info"):
