@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import datetime
 import os
 
 # -------------------- Page Config --------------------
@@ -20,7 +19,6 @@ def detect_current_theme():
 if 'theme' not in st.session_state:
     st.session_state.theme = detect_current_theme()
 
-# -------------------- Theme Toggle --------------------
 def switch_theme():
     new_theme = 'light' if st.session_state.theme == 'dark' else 'dark'
     config = f"""
@@ -41,13 +39,8 @@ font = "sans serif"
 # -------------------- Header UI --------------------
 st.markdown("""
 <style>
-    .block-container {
-        padding-top: 1rem;
-    }
-    .stButton>button {
-        border-radius: 8px;
-        border: 1px solid #ccc;
-    }
+    .block-container { padding-top: 1rem; }
+    .stButton>button { border-radius: 8px; border: 1px solid #ccc; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -62,9 +55,8 @@ with top_row[1]:
 # -------------------- Load Data --------------------
 with st.spinner("Loading data..."):
     try:
-        # Load from relative path
         df = pd.read_csv(
-            os.path.join("sample_5001_rows.csv"),
+            "sample_5001_rows.csv",
             parse_dates=["Filing Date", "Issuance Date"],
             low_memory=False
         )
@@ -79,6 +71,7 @@ df['Issuance Date'] = pd.to_datetime(df['Issuance Date'], errors='coerce')
 df = df.dropna(subset=['LATITUDE', 'LONGITUDE'])
 df = df[df['Delay'].between(1, 180)]
 
+# -------------------- Column Safety --------------------
 def safe_col(name):
     return name if name in df.columns else None
 
@@ -94,7 +87,7 @@ else:
     df['Job Description Tooltip'] = "N/A"
     desc_col = 'Job Description Tooltip'
 
-# -------------------- Filters --------------------
+# -------------------- Date & Permit Filters --------------------
 st.subheader("📅 Date & Permit Filters")
 col1, col2 = st.columns(2)
 
@@ -107,17 +100,35 @@ with col2:
     permit_types = df['Permit Type'].unique().tolist()
     selected_types = st.multiselect("Select Permit Types:", options=permit_types, default=permit_types)
 
+# -------------------- Advanced Filters --------------------
+st.subheader("🛠️ Advanced Filters")
+boroughs = sorted(df['BOROUGH'].dropna().unique())
+selected_boroughs = st.multiselect("Filter by Borough:", options=boroughs, default=boroughs)
+owner_query = st.text_input("Search Owner Name (all words, any order):")
+permittee_query = st.text_input("Search Permittee Name (all words, any order):")
+
+# -------------------- Apply Filters --------------------
 df = df[
     (df['Filing Date'] >= pd.to_datetime(start_date)) &
     (df['Filing Date'] <= pd.to_datetime(end_date)) &
-    (df['Permit Type'].isin(selected_types))
+    (df['Permit Type'].isin(selected_types)) &
+    (df['BOROUGH'].isin(selected_boroughs))
 ]
-#--------------------- Limit for Performance --------------------
+
+if owner_query.strip() and owner_col:
+    terms = owner_query.lower().split()
+    df = df[df[owner_col].astype(str).str.lower().apply(lambda val: all(term in val for term in terms))]
+
+if permittee_query.strip() and permittee_col:
+    terms = permittee_query.lower().split()
+    df = df[df[permittee_col].astype(str).str.lower().apply(lambda val: all(term in val for term in terms))]
+
+# -------------------- Sample Limit --------------------
 if len(df) > 5000:
     df = df.sample(n=5000, random_state=42)
     st.info("📦 Displaying 5,000-row sample for performance.")
 
-# -------------------- Hover Text --------------------
+# -------------------- Hover Tooltip --------------------
 df['hover'] = (
     "<b>Borough:</b> " + df['BOROUGH'].astype(str) + "<br>" +
     "<b>Permit:</b> " + df['Permit Type'].astype(str) +
@@ -132,19 +143,11 @@ df['hover'] = (
 
 # -------------------- Map and Tabs --------------------
 fig = px.scatter_mapbox(
-    df,
-    lat="LATITUDE",
-    lon="LONGITUDE",
-    color="Delay",
-    color_continuous_scale="YlOrRd",
-    size_max=5,
-    zoom=10,
-    height=600,
-    hover_name="hover",
-    title="Filtered NYC Permit Delay Map"
+    df, lat="LATITUDE", lon="LONGITUDE", color="Delay",
+    color_continuous_scale="YlOrRd", size_max=5, zoom=10, height=600,
+    hover_name="hover", title="Filtered NYC Permit Delay Map"
 )
-fig.update_layout(mapbox_style="carto-positron")
-fig.update_layout(margin={"r": 0, "t": 40, "l": 0, "b": 0})
+fig.update_layout(mapbox_style="carto-positron", margin={"r": 0, "t": 40, "l": 0, "b": 0})
 
 tab1, tab2, tab3 = st.tabs(["🗺️ Map", "📊 Delay by Borough", "📥 Export"])
 
@@ -169,7 +172,8 @@ with tab3:
         file_name="filtered_permit_data.csv",
         mime="text/csv"
     )
-# -------------------- Additional Delay Charts --------------------
+
+# -------------------- Delay Trends --------------------
 st.subheader("📊 Delay Trends by Category")
 col1, col2, col3 = st.columns(3)
 
@@ -184,25 +188,7 @@ with col2:
 with col3:
     st.markdown("**📈 Monthly Trend**")
     df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
-    monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
-    st.line_chart(monthly_avg)
-    
-# -------------------- Advanced Filters --------------------
-st.subheader("🛠️ Advanced Filters")
-boroughs = sorted(df['BOROUGH'].dropna().unique())
-selected_boroughs = st.multiselect("Filter by Borough:", options=boroughs, default=boroughs)
-owner_query = st.text_input("Search Owner Name (all words, any order):")
-permittee_query = st.text_input("Search Permittee Name (all words, any order):")
-
-df = df[df['BOROUGH'].isin(selected_boroughs)]
-
-if owner_query.strip() and owner_col:
-    terms = owner_query.lower().split()
-    df = df[df[owner_col].astype(str).str.lower().apply(lambda val: all(term in val for term in terms))]
-
-if permittee_query.strip() and permittee_col:
-    terms = permittee_query.lower().split()
-    df = df[df[permittee_col].astype(str).str.lower().apply(lambda val: all(term in val for term in terms))]
+    st.line_chart(df.groupby("Month")["Delay"].mean().sort_index())
 
 # -------------------- Debug Info --------------------
 with st.expander("🧪 Debug Info"):
@@ -210,3 +196,4 @@ with st.expander("🧪 Debug Info"):
     st.text(f"Dates: {start_date} → {end_date}")
     st.text(f"Permit types: {', '.join(selected_types)}")
     st.write("🔍 Columns in dataset:", df.columns.tolist())
+
