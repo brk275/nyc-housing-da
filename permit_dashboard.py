@@ -186,20 +186,7 @@ with col3:
     df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
     monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
     st.line_chart(monthly_avg)
-
-with tab4:
-    st.subheader("📄 Average Delay by Permit Type")
-    st.bar_chart(df.groupby("Permit Type")["Delay"].mean().sort_values())
-
-with tab5:
-    st.subheader("🔧 Average Delay by Job Type")
-    st.bar_chart(df.groupby("Job Type")["Delay"].mean().sort_values())
-
-with tab6:
-    st.subheader("📈 Monthly Delay Trend")
-    df['Month'] = df['Filing Date'].dt.to_period("M").astype(str)
-    monthly_avg = df.groupby("Month")["Delay"].mean().sort_index()
-    st.line_chart(monthly_avg)
+    
 # -------------------- Advanced Filters --------------------
 st.subheader("🛠️ Advanced Filters")
 boroughs = sorted(df['BOROUGH'].dropna().unique())
